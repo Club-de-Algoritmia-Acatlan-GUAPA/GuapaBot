@@ -17,11 +17,7 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        //TODO logs
-        println!("{} {}", msg.author.name, msg.content);
-
         let mut text = String::new();
-
         match msg.content.as_str() {
             "!ping" => text.push_str("Pong!"),
 
@@ -45,10 +41,11 @@ impl EventHandler for Handler {
 
             _ => {
                 if msg.content.contains("!uva") {
-                    //TODO dar problema solicitado de uva (por número)
-                    let problme_num = msg.content[4..].trim();
+                    //Hay un offset entre el número del problema y el número del url
+                    //Ej. El problema 100 es el 36 en el url, por eso la resta.
+                    let problme_num: u32 = msg.content[4..].trim_end().parse::<u32>().unwrap() - 64;
                     text.push_str(UVA);
-                    text.push_str(problme_num);
+                    text.push_str(&problme_num.to_string());
                 }
             }
         }
@@ -56,6 +53,9 @@ impl EventHandler for Handler {
         if !text.is_empty() {
             if let Err(e) = msg.channel_id.say(&ctx.http, text.as_str()).await {
                 eprintln!("Error al mandar mensaje: {:?}", e);
+            } else {
+                //TODO logs
+                println!("{} {}", msg.author.name, msg.content);
             }
         }
     }
