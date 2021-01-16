@@ -1,9 +1,11 @@
 #![feature(str_split_once)]
+#![feature(once_cell)]
 
-use std::{env, time::Instant};
+mod utils;
+
+use std::{env, lazy::SyncLazy, sync::Mutex, time::Instant};
 
 use rand::Rng;
-use serde::Deserialize;
 use serenity::{
     async_trait,
     http::typing::Typing,
@@ -11,11 +13,9 @@ use serenity::{
     prelude::*,
 };
 
-const LISTA: &str = "https://docs.google.com/spreadsheets/d/1_2EKicfuSAUhUHD4V6ey_nhgAqrF_GBlDRLXdYjvvfw/gviz/tq?tqx=out:csv&sheet=introducción&range=D47:R47";
-const CODEFORCES: &str = "https://codeforces.com";
-const OMEGAUP_RNDM: &str = "https://omegaup.com/problem/random/language/";
-const OMEGAUP: &str = "https://omegaup.com";
-const UVA: &str = "https://onlinejudge.org/index.php?option=com_onlinejudge&Itemid=8&category=24&page=show_problem&problem=";
+static LC_EASY: SyncLazy<Mutex<Vec<utils::Problema>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
+static LC_MEDIUM: SyncLazy<Mutex<Vec<utils::Problema>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
+static LC_HARD: SyncLazy<Mutex<Vec<utils::Problema>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
 
 #[tokio::main]
 async fn main() {
@@ -26,8 +26,22 @@ async fn main() {
         .await
         .expect("Error al crear cliente");
 
-    if let Err(why) = client.start().await {
-        eprintln!("Error: {:?}", why);
+    let mut easy = LC_EASY.lock().unwrap();
+    let mut medium = LC_MEDIUM.lock().unwrap();
+    let mut hard = LC_HARD.lock().unwrap();
+
+    let (e, m, h) = utils::leetcode_problems().await;
+
+    *easy = e;
+    *medium = m;
+    *hard = h;
+
+    drop(easy);
+    drop(medium);
+    drop(hard);
+
+    if let Err(razon) = client.start().await {
+        eprintln!("Error: {:?}", razon);
     }
 }
 
@@ -44,7 +58,7 @@ impl EventHandler for Handler {
 
                 Some(format!(
                     "{}/problemset/problem/{}/{}",
-                    CODEFORCES,
+                    utils::CODEFORCES,
                     rng.gen_range(1..=1452).to_string(),
                     rng.gen_range('A'..='H')
                 ))
@@ -52,8 +66,8 @@ impl EventHandler for Handler {
             }
 
             "!oup" => {
-                let response = reqwest::get(OMEGAUP_RNDM).await.unwrap();
-                Some(format!("{}{}", OMEGAUP, response.url().path()))
+                let response = reqwest::get(utils::OMEGAUP_RNDM).await.unwrap();
+                Some(format!("{}{}", utils::OMEGAUP, response.url().path()))
             }
 
             "!uva" => None, //TODO problema random de UVA
@@ -62,7 +76,7 @@ impl EventHandler for Handler {
                 let medallas = ["🥇", "🥈", "🥉"];
 
                 //ver https://stackoverflow.com/questions/33713084/download-link-for-google-spreadsheets-csv-export-with-multiple-sheets
-                let datos = reqwest::get(LISTA)
+                let datos = reqwest::get(utils::LISTA)
                     .await
                     .unwrap()
                     .text()
@@ -74,6 +88,7 @@ impl EventHandler for Handler {
                     .split(',')
                     .filter_map(|persona| persona.split_once(':'))
                     .map(|(nombre, problema)| (nombre, problema.trim().parse().unwrap_or(0)))
+                    .filter(|&(_, p)| p > 0)
                     .collect();
 
                 //ordena respecto al número de problemas, en orden descendiente.
@@ -88,12 +103,14 @@ impl EventHandler for Handler {
                 Some(text)
             }
 
+            "!help" => Some(utils::HELP.to_string()),
+
             _ => {
                 if msg.content.contains("!uva") {
                     //Hay un offset entre el número del problema y el número del url
                     //Ej. El problema 100 es el 36 en el url, por eso la resta.
                     let problme_num: u32 = msg.content[5..].trim_end().parse::<u32>().unwrap() - 64;
-                    Some(format!("{}{}", UVA, problme_num))
+                    Some(format!("{}{}", utils::UVA, problme_num))
                 } else if msg.content.contains("!cf") {
                     //TODO
                     // Problemas en rango de dificultad
@@ -106,11 +123,12 @@ impl EventHandler for Handler {
 
                     let response = reqwest::get(&format!(
                         "{}/api/problemset.problems{}",
-                        CODEFORCES, categorias
+                        utils::CODEFORCES,
+                        categorias
                     ))
                     .await
                     .unwrap()
-                    .json::<Root>()
+                    .json::<utils::CodeForces>()
                     .await
                     .unwrap()
                     .result;
@@ -126,7 +144,9 @@ impl EventHandler for Handler {
 
                         let link = format!(
                             "{}/problemset/problem/{}/{}",
-                            CODEFORCES, problem.contest_id, problem.index,
+                            utils::CODEFORCES,
+                            problem.contest_id,
+                            problem.index,
                         );
 
                         respuesta.push_str(&format!(
@@ -139,6 +159,25 @@ impl EventHandler for Handler {
 
                     typing.stop();
                     Some(respuesta)
+                } else if msg.content.contains("!lc") {
+                    Some(match msg.content[4..].trim() {
+                        "easy" => {
+                            let problemas = LC_EASY.lock().unwrap();
+                            utils::random_lc(&(*problemas))
+                        }
+
+                        "medium" => {
+                            let problemas = LC_MEDIUM.lock().unwrap();
+                            utils::random_lc(&(*problemas))
+                        }
+
+                        "hard" => {
+                            let problemas = LC_HARD.lock().unwrap();
+                            utils::random_lc(&(*problemas))
+                        }
+
+                        _ => String::from("¿easy, medium o hard?"),
+                    })
                 } else {
                     None
                 }
@@ -163,23 +202,4 @@ impl EventHandler for Handler {
     async fn ready(&self, _: Context, _: Ready) {
         println!("Listo para responder.");
     }
-}
-
-#[derive(Deserialize)]
-pub struct Root {
-    result: Result,
-}
-
-#[derive(Deserialize)]
-pub struct Result {
-    problems: Vec<Problem>,
-}
-
-#[derive(Deserialize)]
-pub struct Problem {
-    #[serde(rename = "contestId")]
-    contest_id: u16,
-    index: String,
-    name: String,
-    rating: Option<u16>,
 }
