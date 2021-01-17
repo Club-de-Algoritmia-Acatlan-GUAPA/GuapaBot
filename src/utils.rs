@@ -1,8 +1,9 @@
+use deunicode::deunicode;
 use rand::Rng;
 use serde::Deserialize;
 
-pub async fn leetcode_problems() -> (Vec<Problema>, Vec<Problema>, Vec<Problema>) {
-    let problems = reqwest::get("https://leetcode.com/api/problems/algorithms/")
+pub async fn leetcode_problems() -> (Vec<ProblemaLC>, Vec<ProblemaLC>, Vec<ProblemaLC>) {
+    let problems = reqwest::get(LEET_CODE_DB)
         .await
         .unwrap()
         .json::<LeetCode>()
@@ -18,15 +19,15 @@ pub async fn leetcode_problems() -> (Vec<Problema>, Vec<Problema>, Vec<Problema>
         if !problem.paid_only {
             match problem.difficulty.level {
                 1 => {
-                    easy.push(problem.clone());
+                    easy.push(problem);
                 }
 
                 2 => {
-                    medium.push(problem.clone());
+                    medium.push(problem);
                 }
 
                 3 => {
-                    hard.push(problem.clone());
+                    hard.push(problem);
                 }
 
                 _ => {}
@@ -37,14 +38,55 @@ pub async fn leetcode_problems() -> (Vec<Problema>, Vec<Problema>, Vec<Problema>
     (easy, medium, hard)
 }
 
-pub fn random_lc(problemas: &[Problema]) -> String {
+pub fn random_lc(problemas: &[ProblemaLC]) -> String {
     let mut rng = rand::thread_rng();
     let p = &problemas[rng.gen_range(0..problemas.len())].stat;
 
     format!(
         "{}\nAccepted: {}\tSubmissions: {}\n{}{}",
-        p.question_title, p.total_acs, p.total_submitted, LEET_CODE, p.question_title_slug
+        p.question_title,
+        p.total_acs,
+        p.total_submitted,
+        LEET_CODE,
+        p.question_title.to_lowercase().replace(' ', "-")
     )
+}
+
+pub async fn problemas_guapa() -> Vec<ProblemaGuapa> {
+    reqwest::get(JUEZ_GUAPA_DB)
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap()
+        .lines()
+        .filter_map(|p| p.split_once(','))
+        .map(|(n, t)| ProblemaGuapa {
+            nombre: n.replace("\"", ""),
+            temas: t.replace("\"", ""),
+        })
+        .collect()
+}
+
+pub fn random_guapa(problemas: &[ProblemaGuapa]) -> String {
+    let mut rng = rand::thread_rng();
+    let p = &problemas[rng.gen_range(0..problemas.len())];
+    let mut link = deunicode(&p.nombre);
+    link.make_ascii_lowercase();
+    let link = link
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>()
+        .trim_matches('-')
+        .replace("---", "-");
+
+    format!("{}\nTema: {}\n{}{}", p.nombre, p.temas, JUEZ_GUAPA, link)
 }
 
 pub const HELP: &str = "TODO";
@@ -54,32 +96,33 @@ pub const OMEGAUP_RNDM: &str = "https://omegaup.com/problem/random/language/";
 pub const OMEGAUP: &str = "https://omegaup.com";
 pub const UVA: &str = "https://onlinejudge.org/index.php?option=com_onlinejudge&Itemid=8&category=24&page=show_problem&problem=";
 pub const LEET_CODE: &str = "https://leetcode.com/problems/";
+pub const LEET_CODE_DB: &str = "https://leetcode.com/api/problems/algorithms/";
+pub const JUEZ_GUAPA_DB: &str = "https://docs.google.com/spreadsheets/d/1w3-KchcuvCGi5-Qsnrptv8a_N_9fUMhnjrJeyHPufkk/gviz/tq?tqx=out:csv&sheet=JuezGuapa&range=A1:B339";
+pub const JUEZ_GUAPA: &str = "https://juezguapa.com/problemas/enunciado/";
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Deserialize)]
 pub struct LeetCode {
     #[serde(rename = "stat_status_pairs")]
-    pub problemas: Vec<Problema>,
+    pub problemas: Vec<ProblemaLC>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Deserialize)]
 #[serde(rename = "stat_status_pairs")]
-pub struct Problema {
+pub struct ProblemaLC {
     pub stat: Stat,
     pub difficulty: Difficulty,
     pub paid_only: bool,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Deserialize)]
 pub struct Stat {
     #[serde(rename = "question__title")]
+    pub total_acs: u32,
     pub question_title: String,
-    #[serde(rename = "question__title_slug")]
-    pub question_title_slug: String,
-    pub total_acs: i64,
-    pub total_submitted: i64,
+    pub total_submitted: u32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Deserialize)]
 pub struct Difficulty {
     pub level: u8,
 }
@@ -91,14 +134,19 @@ pub struct CodeForces {
 
 #[derive(Deserialize)]
 pub struct Result {
-    pub problems: Vec<Problem>,
+    pub problems: Vec<ProblemaCF>,
 }
 
 #[derive(Deserialize)]
-pub struct Problem {
+pub struct ProblemaCF {
     #[serde(rename = "contestId")]
     pub contest_id: u16,
     pub index: String,
     pub name: String,
     pub rating: Option<u16>,
+}
+
+pub struct ProblemaGuapa {
+    nombre: String,
+    temas: String,
 }

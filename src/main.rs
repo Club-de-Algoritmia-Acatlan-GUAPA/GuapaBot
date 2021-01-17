@@ -13,10 +13,6 @@ use serenity::{
     prelude::*,
 };
 
-static LC_EASY: SyncLazy<Mutex<Vec<utils::Problema>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
-static LC_MEDIUM: SyncLazy<Mutex<Vec<utils::Problema>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
-static LC_HARD: SyncLazy<Mutex<Vec<utils::Problema>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
-
 #[tokio::main]
 async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("No hay token");
@@ -26,19 +22,7 @@ async fn main() {
         .await
         .expect("Error al crear cliente");
 
-    let mut easy = LC_EASY.lock().unwrap();
-    let mut medium = LC_MEDIUM.lock().unwrap();
-    let mut hard = LC_HARD.lock().unwrap();
-
-    let (e, m, h) = utils::leetcode_problems().await;
-
-    *easy = e;
-    *medium = m;
-    *hard = h;
-
-    drop(easy);
-    drop(medium);
-    drop(hard);
+    inicia_problemas().await;
 
     if let Err(razon) = client.start().await {
         eprintln!("Error: {:?}", razon);
@@ -101,6 +85,11 @@ impl EventHandler for Handler {
                 }
 
                 Some(text)
+            }
+
+            "!jg" => {
+                let problemas = GUAPA.lock().unwrap();
+                Some(utils::random_guapa(&(*problemas)))
             }
 
             "!help" => Some(utils::HELP.to_string()),
@@ -167,7 +156,7 @@ impl EventHandler for Handler {
                         }
 
                         "medium" => {
-                            let problemas = LC_MEDIUM.lock().unwrap();
+                            let problemas = LC_MED.lock().unwrap();
                             utils::random_lc(&(*problemas))
                         }
 
@@ -202,4 +191,23 @@ impl EventHandler for Handler {
     async fn ready(&self, _: Context, _: Ready) {
         println!("Listo para responder.");
     }
+}
+
+static GUAPA: SyncLazy<Mutex<Vec<utils::ProblemaGuapa>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
+static LC_EASY: SyncLazy<Mutex<Vec<utils::ProblemaLC>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
+static LC_HARD: SyncLazy<Mutex<Vec<utils::ProblemaLC>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
+static LC_MED: SyncLazy<Mutex<Vec<utils::ProblemaLC>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
+
+async fn inicia_problemas() {
+    let mut guapa = GUAPA.lock().unwrap();
+    let mut easy = LC_EASY.lock().unwrap();
+    let mut medium = LC_MED.lock().unwrap();
+    let mut hard = LC_HARD.lock().unwrap();
+
+    let (e, m, h) = utils::leetcode_problems().await;
+
+    *guapa = utils::problemas_guapa().await;
+    *easy = e;
+    *medium = m;
+    *hard = h;
 }
