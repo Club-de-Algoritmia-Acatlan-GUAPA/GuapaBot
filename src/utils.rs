@@ -117,8 +117,8 @@ pub struct ProblemaLC {
 #[derive(Deserialize)]
 pub struct Stat {
     #[serde(rename = "question__title")]
-    pub total_acs: u32,
     pub question_title: String,
+    pub total_acs: u32,
     pub total_submitted: u32,
 }
 
