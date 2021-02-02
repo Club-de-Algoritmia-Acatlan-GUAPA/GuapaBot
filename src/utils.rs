@@ -43,10 +43,11 @@ pub fn random_lc(problemas: &[ProblemaLC]) -> String {
     let p = &problemas[rng.gen_range(0..problemas.len())].stat;
 
     format!(
-        "{}\nAccepted: {}\tSubmissions: {}\n{}{}",
+        "{}\nAccepted: {}\tSubmissions: {}\nAC rate: {:.2}%\n{}{}",
         p.question_title,
         p.total_acs,
         p.total_submitted,
+        (p.total_acs as f32 / p.total_submitted as f32) * 100.0,
         LEET_CODE,
         p.question_title.to_lowercase().replace(' ', "-")
     )
