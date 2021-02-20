@@ -1,15 +1,14 @@
-#![feature(str_split_once)]
-#![feature(once_cell)]
+#![feature(str_split_once, once_cell)]
 
 mod utils;
 
-use std::{env, lazy::SyncLazy, sync::Mutex, time::Instant};
+use std::{collections::HashSet, env, lazy::SyncLazy, sync::RwLock, time::Instant};
 
 use rand::Rng;
 use serenity::{
     async_trait,
     http::typing::Typing,
-    model::{channel::Message, gateway::Ready},
+    model::{channel::Message, gateway::Ready, id::GuildId},
     prelude::*,
 };
 
@@ -88,9 +87,14 @@ impl EventHandler for Handler {
             }
 
             "!jg" => {
-                let problemas = GUAPA.lock().unwrap();
+                let problemas = GUAPA.read().unwrap();
                 Some(utils::random_guapa(&(*problemas)))
             }
+
+            "!auth" => Some({
+                auth(&ctx).await;
+                String::default()
+            }),
 
             "!help" => Some(utils::HELP.to_string()),
 
@@ -151,17 +155,17 @@ impl EventHandler for Handler {
                 } else if msg.content.contains("!lc") {
                     Some(match msg.content[4..].trim() {
                         "easy" => {
-                            let problemas = LC_EASY.lock().unwrap();
+                            let problemas = LC_EASY.read().unwrap();
                             utils::random_lc(&(*problemas))
                         }
 
                         "medium" => {
-                            let problemas = LC_MED.lock().unwrap();
+                            let problemas = LC_MED.read().unwrap();
                             utils::random_lc(&(*problemas))
                         }
 
                         "hard" => {
-                            let problemas = LC_HARD.lock().unwrap();
+                            let problemas = LC_HARD.read().unwrap();
                             utils::random_lc(&(*problemas))
                         }
 
@@ -193,16 +197,24 @@ impl EventHandler for Handler {
     }
 }
 
-static GUAPA: SyncLazy<Mutex<Vec<utils::ProblemaGuapa>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
-static LC_EASY: SyncLazy<Mutex<Vec<utils::ProblemaLC>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
-static LC_HARD: SyncLazy<Mutex<Vec<utils::ProblemaLC>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
-static LC_MED: SyncLazy<Mutex<Vec<utils::ProblemaLC>>> = SyncLazy::new(|| Mutex::new(Vec::new()));
+static USERS: SyncLazy<RwLock<HashSet<String>>> = SyncLazy::new(|| RwLock::new(HashSet::new()));
+
+static GUAPA: SyncLazy<RwLock<Vec<utils::ProblemaGuapa>>> =
+    SyncLazy::new(|| RwLock::new(Vec::new()));
+
+static LC_EASY: SyncLazy<RwLock<Vec<utils::ProblemaLC>>> =
+    SyncLazy::new(|| RwLock::new(Vec::new()));
+
+static LC_HARD: SyncLazy<RwLock<Vec<utils::ProblemaLC>>> =
+    SyncLazy::new(|| RwLock::new(Vec::new()));
+
+static LC_MED: SyncLazy<RwLock<Vec<utils::ProblemaLC>>> = SyncLazy::new(|| RwLock::new(Vec::new()));
 
 async fn inicia_problemas() {
-    let mut guapa = GUAPA.lock().unwrap();
-    let mut easy = LC_EASY.lock().unwrap();
-    let mut medium = LC_MED.lock().unwrap();
-    let mut hard = LC_HARD.lock().unwrap();
+    let mut guapa = GUAPA.write().unwrap();
+    let mut easy = LC_EASY.write().unwrap();
+    let mut medium = LC_MED.write().unwrap();
+    let mut hard = LC_HARD.write().unwrap();
 
     let (e, m, h) = utils::leetcode_problems().await;
 
@@ -210,4 +222,31 @@ async fn inicia_problemas() {
     *easy = e;
     *medium = m;
     *hard = h;
+}
+
+async fn auth(ctx: &Context) {
+    let guild_id = env!("GUAPA_ID").parse::<u64>().unwrap();
+    let guild = GuildId(guild_id);
+    let members = guild.members(ctx, None, None).await.unwrap();
+
+    let up_users = {
+        let mut users = USERS.write().unwrap();
+
+        for memb in members.iter() {
+            users.insert(memb.user.name.clone());
+            users.insert(memb.user.discriminator.to_string());
+            users.insert(memb.user.id.to_string());
+            users.insert(format!("{}#{}", memb.user.name, memb.user.discriminator));
+        }
+
+        users.clone()
+    };
+
+    let client = reqwest::Client::new();
+
+    let _ = client
+        .post("https://guapa.herokuapp.com/mem")
+        .json(&up_users)
+        .send()
+        .await;
 }
