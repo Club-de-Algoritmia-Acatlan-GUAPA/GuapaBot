@@ -186,8 +186,10 @@ impl EventHandler for Handler {
                 Instant::now().duration_since(now)
             );
 
-            if let Err(e) = msg.channel_id.say(&ctx.http, respuesta).await {
-                eprintln!("Error al mandar mensaje: {:?}", e);
+            if !respuesta.is_empty() {
+                if let Err(e) = msg.channel_id.say(&ctx.http, respuesta).await {
+                    eprintln!("Error al mandar mensaje: {:?}", e);
+                }
             }
         }
     }
