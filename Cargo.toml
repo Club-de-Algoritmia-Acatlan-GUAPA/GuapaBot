@@ -1,13 +1,17 @@
 [package]
 name = "guapa_bot"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Bruno A. Muciño <mucinoab@gmail.com>"]
-edition = "2018"
+edition = "2021"
+resolver = "2"
 
 [dependencies]
-deunicode = "1.1.1"
-rand = "0.8.3"
-reqwest = { version = "0.11.0", features = ["json"] }
-serde = { version = "1.0.123", features = ["derive"] }
-serenity ={ version = "0.10.2", default-features = false, features = ["client", "gateway", "rustls_backend", "model"] }
-tokio = { version = "1.2.0", features = ["macros", "rt-multi-thread"] }
+rand = "0.8.4"
+reqwest = { version = "0.11.4", features = ["json"] }
+serde = { version = "1.0.130", features = ["derive"] }
+serenity = { version = "0.10.9", default-features = false, features = ["gateway", "rustls_backend", "standard_framework"] }
+tokio = { version = "1.11.0", features = ["macros", "rt-multi-thread"] }
+tokio-cron-scheduler = "0.2.3"
+
+[profile.dev]
+debug = false
