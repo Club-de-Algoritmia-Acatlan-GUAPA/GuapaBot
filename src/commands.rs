@@ -18,7 +18,7 @@ use serenity::{
 struct Problems;
 
 #[command]
-#[aliases("leet_code", "leetcode", "cl")]
+#[aliases("leet_code", "leetcode", "lc")]
 pub async fn leet_code(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if let Some(difficulty) = args.current() {
         let problems = match difficulty.trim() {
