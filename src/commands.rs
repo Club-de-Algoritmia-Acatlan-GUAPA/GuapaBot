@@ -17,6 +17,10 @@ use serenity::{
 #[commands(leet_code, code_forces, omega_up)]
 struct Problems;
 
+#[group]
+#[commands(top_problems)]
+struct Misc;
+
 #[command]
 #[aliases("leet_code", "leetcode", "lc")]
 pub async fn leet_code(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
@@ -108,6 +112,36 @@ pub async fn omega_up(ctx: &Context, msg: &Message) -> CommandResult {
     );
 
     send_embed(&msg.channel_id, &ctx.http, "omegaUp", &problem_url, &title).await?;
+
+    Ok(())
+}
+
+#[command]
+#[aliases("top")]
+pub async fn top_problems(ctx: &Context, msg: &Message) -> CommandResult {
+    // Reference: https://stackoverflow.com/questions/33713084/download-link-for-google-spreadsheets-csv-export-with-multiple-sheets
+    let problems_query = "https://docs.google.com/spreadsheets/d/1_2EKicfuSAUhUHD4V6ey_nhgAqrF_GBlDRLXdYjvvfw/gviz/tq?tqx=out:csv&sheet=introducción&range=D50:Z50";
+
+    let mut problems_count: Vec<(String, u64)> = reqwest::get(problems_query)
+        .await?
+        .text()
+        .await?
+        .replace("\"", "")
+        .split(',')
+        .filter_map(|l| l.split_once(':'))
+        .map(|(n, p)| (n.trim(), p.trim().parse().unwrap_or_default()))
+        .map(|(n, p)| (n.into(), p))
+        .collect();
+
+    problems_count.sort_by(|a, b| b.1.cmp(&a.1));
+
+    let mut podium = String::new();
+
+    for ((name, problems), medal) in problems_count.iter().take(3).zip(["🥇", "🥈", "🥉"]) {
+        podium.push_str(&format!("{} {} {}\n", medal, name, problems));
+    }
+
+    send_embed(&msg.channel_id, &ctx.http, "Problemas Hechos", "", &podium).await?;
 
     Ok(())
 }

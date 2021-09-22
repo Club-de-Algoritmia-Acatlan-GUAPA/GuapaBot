@@ -17,7 +17,8 @@ async fn main() {
         .configure(|c| c.prefix("!"))
         .before(before)
         .normal_message(normal_message)
-        .group(&PROBLEMS_GROUP);
+        .group(&PROBLEMS_GROUP)
+        .group(&MISC_GROUP);
 
     let token = std::env::var("DISCORD_TOKEN").expect("Discord token not found");
     let mut client = serenity::Client::builder(&token)
