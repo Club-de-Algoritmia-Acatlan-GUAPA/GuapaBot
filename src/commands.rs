@@ -119,19 +119,23 @@ pub async fn omega_up(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases("top")]
 pub async fn top_problems(ctx: &Context, msg: &Message) -> CommandResult {
-    // Reference: https://stackoverflow.com/questions/33713084/download-link-for-google-spreadsheets-csv-export-with-multiple-sheets
-    let problems_query = "https://docs.google.com/spreadsheets/d/1_2EKicfuSAUhUHD4V6ey_nhgAqrF_GBlDRLXdYjvvfw/gviz/tq?tqx=out:csv&sheet=introducción&range=D50:Z50";
+    let problem_list =
+        "https://docs.google.com/spreadsheets/d/1_2EKicfuSAUhUHD4V6ey_nhgAqrF_GBlDRLXdYjvvfw";
 
-    let mut problems_count: Vec<(String, u64)> = reqwest::get(problems_query)
-        .await?
-        .text()
-        .await?
-        .replace("\"", "")
-        .split(',')
-        .filter_map(|l| l.split_once(':'))
-        .map(|(n, p)| (n.trim(), p.trim().parse().unwrap_or_default()))
-        .map(|(n, p)| (n.into(), p))
-        .collect();
+    // Reference: https://stackoverflow.com/questions/33713084/download-link-for-google-spreadsheets-csv-export-with-multiple-sheets
+    let mut problems_count: Vec<(String, u64)> = reqwest::get(&format!(
+        "{}/gviz/tq?tqx=out:csv&sheet=introducción&range=D50:Z50",
+        problem_list,
+    ))
+    .await?
+    .text()
+    .await?
+    .replace("\"", "")
+    .split(',')
+    .filter_map(|l| l.split_once(':'))
+    .map(|(n, p)| (n.trim(), p.trim().parse().unwrap_or_default()))
+    .map(|(n, p)| (n.into(), p))
+    .collect();
 
     problems_count.sort_by(|a, b| b.1.cmp(&a.1));
 
@@ -141,7 +145,14 @@ pub async fn top_problems(ctx: &Context, msg: &Message) -> CommandResult {
         podium.push_str(&format!("{} {} {}\n", medal, name, problems));
     }
 
-    send_embed(&msg.channel_id, &ctx.http, "Problemas Hechos", "", &podium).await?;
+    send_embed(
+        &msg.channel_id,
+        &ctx.http,
+        "Problemas Hechos",
+        problem_list,
+        &podium,
+    )
+    .await?;
 
     Ok(())
 }
