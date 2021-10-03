@@ -133,8 +133,7 @@ pub async fn top_problems(ctx: &Context, msg: &Message) -> CommandResult {
     .replace("\"", "")
     .split(',')
     .filter_map(|l| l.split_once(':'))
-    .map(|(n, p)| (n.trim(), p.trim().parse().unwrap_or_default()))
-    .map(|(n, p)| (n.into(), p))
+    .map(|(n, p)| (n.trim().into(), p.trim().parse().unwrap_or_default()))
     .collect();
 
     problems_count.sort_by(|a, b| b.1.cmp(&a.1));
