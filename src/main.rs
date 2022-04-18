@@ -1,11 +1,9 @@
 #![feature(once_cell)]
 
-mod alerts;
 mod commands;
 mod problems;
 mod utils;
 
-use alerts::*;
 use commands::*;
 use problems::*;
 
@@ -17,7 +15,7 @@ use serenity::{
 
 #[tokio::main]
 async fn main() {
-    tokio::join!(fetch_problems(), session_alerts());
+    fetch_problems().await;
 
     let fw = serenity::framework::StandardFramework::new()
         .configure(|c| c.prefix("!"))
