@@ -25,14 +25,14 @@ struct Misc;
 #[aliases("leet_code", "leetcode", "lc")]
 pub async fn leet_code(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if let Some(difficulty) = args.current() {
-        let problems = match difficulty.trim() {
+        let problems = match difficulty.trim().to_lowercase().as_str() {
             "easy" => LC_ESY.read().await,
             "medium" => LC_MED.read().await,
             "hard" => LC_HRD.read().await,
 
             _ => {
                 msg.channel_id
-                    .say(&ctx.http, "¿easy, medium o hard?")
+                    .say(&ctx.http, "¿easy, medium o hard?\n Ej. !lc hard")
                     .await?;
 
                 return Ok(());
@@ -66,6 +66,10 @@ pub async fn leet_code(ctx: &Context, msg: &Message, args: Args) -> CommandResul
             &content,
         )
         .await?;
+    } else {
+        msg.channel_id
+            .say(&ctx.http, "¿easy, medium o hard?\n Ej. !lc hard")
+            .await?;
     }
 
     Ok(())
@@ -130,7 +134,7 @@ pub async fn top_problems(ctx: &Context, msg: &Message) -> CommandResult {
     .await?
     .text()
     .await?
-    .replace("\"", "")
+    .replace('\"', "")
     .split(',')
     .filter_map(|l| l.split_once(':'))
     .map(|(n, p)| (n.trim().into(), p.trim().parse().unwrap_or_default()))
