@@ -2,7 +2,7 @@
 name = "guapa_bot"
 version = "0.2.0"
 authors = ["Bruno A. Muciño <mucinoab@gmail.com>"]
-edition = "2021"
+edition = "2024"
 resolver = "2"
 
 [dependencies]

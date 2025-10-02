@@ -1,14 +1,14 @@
-use std::lazy::SyncLazy;
+use std::sync::LazyLock;
 
 use serde::Deserialize;
 use serenity::prelude::RwLock;
 
-type RwLockVec<T> = SyncLazy<RwLock<Vec<T>>>;
+type RwLockVec<T> = LazyLock<RwLock<Vec<T>>>;
 
 // Leet Code categories
-pub static LC_ESY: RwLockVec<ProblemaLC> = SyncLazy::new(|| RwLock::new(Vec::new()));
-pub static LC_HRD: RwLockVec<ProblemaLC> = SyncLazy::new(|| RwLock::new(Vec::new()));
-pub static LC_MED: RwLockVec<ProblemaLC> = SyncLazy::new(|| RwLock::new(Vec::new()));
+pub static LC_ESY: RwLockVec<ProblemaLC> = LazyLock::new(|| RwLock::new(Vec::new()));
+pub static LC_HRD: RwLockVec<ProblemaLC> = LazyLock::new(|| RwLock::new(Vec::new()));
+pub static LC_MED: RwLockVec<ProblemaLC> = LazyLock::new(|| RwLock::new(Vec::new()));
 
 pub async fn leetcode_problems() -> (Vec<ProblemaLC>, Vec<ProblemaLC>, Vec<ProblemaLC>) {
     let problems = reqwest::get(LEET_CODE_DB)

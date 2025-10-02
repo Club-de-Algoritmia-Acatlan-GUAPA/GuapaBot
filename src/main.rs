@@ -1,5 +1,3 @@
-#![feature(once_cell)]
-
 mod commands;
 mod problems;
 mod utils;
