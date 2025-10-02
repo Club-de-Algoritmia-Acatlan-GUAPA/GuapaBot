@@ -1,24 +1,21 @@
-use serenity::{
-    builder::{CreateEmbed, CreateMessage},
-    http::Http,
-    model::{channel::Message, id::ChannelId},
-    Result,
-};
+use crate::{BotContext, Error};
+
+use poise::{serenity_prelude::builder::CreateEmbed, CreateReply};
 
 pub async fn send_embed(
-    channel: &ChannelId,
-    http: &Http,
+    ctx: BotContext<'_>,
     title: &str,
     url: &str,
-    desciption: &str,
-) -> Result<Message> {
+    description: &str,
+) -> Result<(), Error> {
     let embed = CreateEmbed::new()
         .title(title)
         .url(url)
-        .description(desciption)
+        .description(description)
         .color(42586); // green #00A65A
 
-    let message = CreateMessage::new().embed(embed);
-
-    channel.send_message(http, message).await
+    ctx.send(CreateReply::default().embed(embed))
+        .await
+        .map(|_| ())
+        .map_err(|e| -> Error { Box::new(e) })
 }

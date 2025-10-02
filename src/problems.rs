@@ -1,7 +1,7 @@
 use std::sync::LazyLock;
 
 use serde::Deserialize;
-use serenity::prelude::RwLock;
+use tokio::sync::RwLock;
 
 type RwLockVec<T> = LazyLock<RwLock<Vec<T>>>;
 
@@ -47,12 +47,11 @@ pub async fn leetcode_problems() -> (Vec<ProblemaLC>, Vec<ProblemaLC>, Vec<Probl
 }
 
 pub async fn fetch_problems() {
-    // Leet code
+    let (e, m, h) = leetcode_problems().await;
+
     let mut easy = LC_ESY.write().await;
     let mut medium = LC_MED.write().await;
     let mut hard = LC_HRD.write().await;
-
-    let (e, m, h) = leetcode_problems().await;
 
     *easy = e;
     *medium = m;
