@@ -6,10 +6,10 @@ edition = "2021"
 resolver = "2"
 
 [dependencies]
-rand = "0.9"
-reqwest = { version = "0.12", features = ["json"] }
+rand = { version = "0.9", default-features = false, features = ["std", "thread_rng"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1.0", features = ["derive"] }
-tokio = { version = "1.47", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.47", default-features = false, features = ["macros", "rt", "rt-multi-thread", "sync"] }
 poise = { version = "0.6" }
 
 [profile.dev]

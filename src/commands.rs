@@ -5,7 +5,7 @@ use crate::{
 };
 
 use poise::Command;
-use rand::Rng;
+use rand::{rngs::ThreadRng, Rng};
 
 /// List of all prefix commands available to the bot.
 pub fn register_commands() -> Vec<Command<Data, Error>> {
@@ -41,7 +41,7 @@ pub async fn leet_code(
     }
 
     let index = {
-        let mut rng = rand::rng();
+        let mut rng: ThreadRng = ThreadRng::default();
         rng.random_range(0..problems_guard.len())
     };
     let stat = &problems_guard[index].stat;
@@ -74,7 +74,7 @@ pub async fn leet_code(
 )]
 pub async fn code_forces(ctx: BotContext<'_>) -> Result<(), Error> {
     let (contest, problem) = {
-        let mut rng = rand::rng();
+        let mut rng: ThreadRng = ThreadRng::default();
         (rng.random_range(1..=1500), rng.random_range('A'..='H'))
     };
 
