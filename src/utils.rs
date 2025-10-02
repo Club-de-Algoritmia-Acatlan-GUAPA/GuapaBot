@@ -1,4 +1,5 @@
 use serenity::{
+    builder::{CreateEmbed, CreateMessage},
     http::Http,
     model::{channel::Message, id::ChannelId},
     Result,
@@ -11,16 +12,13 @@ pub async fn send_embed(
     url: &str,
     desciption: &str,
 ) -> Result<Message> {
-    channel
-        .send_message(http, |m| {
-            m.embed(|e| {
-                e.title(title);
-                e.url(url);
-                e.description(desciption);
-                e.color(42586); // green #00A65A
-                e
-            });
-            m
-        })
-        .await
+    let embed = CreateEmbed::new()
+        .title(title)
+        .url(url)
+        .description(desciption)
+        .color(42586); // green #00A65A
+
+    let message = CreateMessage::new().embed(embed);
+
+    channel.send_message(http, message).await
 }
